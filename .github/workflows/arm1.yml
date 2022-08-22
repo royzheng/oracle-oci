@@ -1,0 +1,68 @@
+name: 'ARM1'
+on:
+  repository_dispatch:
+    types:
+      - arm1
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install oci-cli
+        uses: bytesbay/oci-cli-action@v1.0.2
+        with:
+          user: "${{ secrets.OCI_USER }}"
+          fingerprint: "${{ secrets.OCI_FINGERPRINT }}"
+          tenancy: "${{ secrets.OCI_TENANCY }}"
+          region: "${{ secrets.OCI_REGION }}"
+          api_key: |
+            ${{ secrets.OCI_API_KEY }}
+          verbose: true
+      - name: OCI
+        env:
+          TENANCY_OCID: "${{ secrets.TENANCY_OCID }}"
+          OCI_PRIVATE_IP_OCID: "${{ secrets.ARM1_OCI_PRIVATE_IP_OCID }}"
+          OCI_VNIC_OCID: "${{ secrets.ARM1_OCI_VNIC_OCID }}"
+          CF_ZONE_ID: "${{ secrets.CF_ZONE_ID }}"
+          CF_A_ID: "${{ secrets.ARM1_CF_A_ID }}"
+          CF_AUTH: "${{ secrets.CF_AUTH }}"
+          CF_DOMAIN: "${{ secrets.ARM1_CF_DOMAIN }}"
+          MSG_API: "${{ secrets.MSG_API }}"
+          MSG_TOKEN: "${{ secrets.MSG_TOKEN }}"
+          MASK_ORACLE_USER: "${{ secrets.MASK_ORACLE_USER }}"
+          MASK_CF_ZONE_NAME: "${{ secrets.MASK_CF_ZONE_NAME }}"
+          MASK_ORACLE_DOMAIN: "${{ secrets.MASK_ORACLE_DOMAIN }}"
+          MESSAGE: ${{ github.event.client_payload.message }}
+        run: |
+          echo "更换IP原因 $MESSAGE"
+          PREV_PUBLIC_IP=$(oci network vnic get --vnic-id $OCI_VNIC_OCID --query 'data."public-ip"' --raw-output)
+          if [ -n "$PREV_PUBLIC_IP" ]
+          then
+            OCI_PUBLIC_IP_OCID=$(oci network public-ip get --private-ip-id $OCI_PRIVATE_IP_OCID  --query 'data.id' --raw-output)
+            oci network public-ip delete --public-ip-id $OCI_PUBLIC_IP_OCID --force --wait-for-state TERMINATED
+          fi
+          sleep 10
+          oci network public-ip create --compartment-id  $TENANCY_OCID --lifetime EPHEMERAL --private-ip-id $OCI_PRIVATE_IP_OCID --wait-for-state ASSIGNED
+          PUBLIC_IP=$(oci network public-ip get --private-ip-id $OCI_PRIVATE_IP_OCID  --query 'data."ip-address"' --raw-output)
+          curl --silent -X PATCH "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records/$CF_A_ID" \
+               -H "$CF_AUTH" \
+               -H "Content-Type: application/json" \
+               --data "{\"type\":\"A\",\"name\":\"$CF_DOMAIN\",\"content\":\"$PUBLIC_IP\",\"ttl\":60,\"priority\":10,\"proxied\":false}"
+          echo ""
+          curl --silent -X POST \
+            $MSG_API \
+            -F token=$MSG_TOKEN \
+            -F host=arm1 \
+            -F "message=机器ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
+      - name: RetryJob
+        if: ${{ failure() }}
+        env:
+          GAYHUB_AUTH: "${{ secrets.GAYHUB_AUTH }}"
+        run: |
+          SLEEPSECOND=$(( $RANDOM % 120 ))
+          SLEEPSECOND=$(($SLEEPSECOND + 60))
+          echo "Sleep $SLEEPSECOND"
+          sleep $SLEEPSECOND
+          curl -s -X POST https://api.github.com/repos/royzheng/oracle-oci/dispatches \
+                        -H "Accept: application/vnd.github.everest-preview+json" \
+                        -H "$GAYHUB_AUTH" \
+                        --data "{\"event_type\": \"arm1\", \"client_payload\": { \"message\": \"Retry ARM1\"} }"
