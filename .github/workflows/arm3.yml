@@ -47,7 +47,7 @@ jobs:
                -H "$CF_AUTH" \
                -H "Content-Type: application/json" \
                --data "{\"type\":\"A\",\"name\":\"$CF_DOMAIN\",\"content\":\"$PUBLIC_IP\",\"ttl\":60,\"priority\":10,\"proxied\":false}"
-          echo ""
+          echo "curl --silent -X POST $MSG_API -F chat_id=$MSG_CHAT_ID text=[ARM3]ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
           curl --silent -X POST \
             $MSG_API \
             -F chat_id=$MSG_CHAT_ID \
