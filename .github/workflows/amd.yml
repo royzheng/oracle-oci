@@ -27,13 +27,12 @@ jobs:
           CF_AUTH: "${{ secrets.CF_AUTH }}"
           CF_DOMAIN: "${{ secrets.AMD_CF_DOMAIN }}"
           MSG_API: "${{ secrets.MSG_API }}"
-          MSG_TOKEN: "${{ secrets.MSG_TOKEN }}"
+          MSG_CHAT_ID: "${{ secrets.MSG_CHAT_ID }}"
           MASK_ORACLE_USER: "${{ secrets.MASK_ORACLE_USER }}"
           MASK_CF_ZONE_NAME: "${{ secrets.MASK_CF_ZONE_NAME }}"
           MASK_ORACLE_DOMAIN: "${{ secrets.MASK_ORACLE_DOMAIN }}"
           MESSAGE: ${{ github.event.client_payload.message }}
         run: |
-          echo "更换IP原因 $MESSAGE"
           PREV_PUBLIC_IP=$(oci network vnic get --vnic-id $OCI_VNIC_OCID --query 'data."public-ip"' --raw-output)
           if [ -n "$PREV_PUBLIC_IP" ]
           then
@@ -50,9 +49,8 @@ jobs:
           echo ""
           curl --silent -X POST \
             $MSG_API \
-            -F token=$MSG_TOKEN \
-            -F host=amd \
-            -F "message=机器ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
+            -F chat_id=$MSG_CHAT_ID \
+            -F "text=[AMD]ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
       - name: RetryJob
         if: ${{ failure() }}
         env:

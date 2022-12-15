@@ -27,7 +27,7 @@ jobs:
           CF_AUTH: "${{ secrets.CF_AUTH }}"
           CF_DOMAIN: "${{ secrets.ARM2_CF_DOMAIN }}"
           MSG_API: "${{ secrets.MSG_API }}"
-          MSG_TOKEN: "${{ secrets.MSG_TOKEN }}"
+          MSG_CHAT_ID: "${{ secrets.MSG_CHAT_ID }}"
           MASK_ORACLE_USER: "${{ secrets.MASK_ORACLE_USER }}"
           MASK_CF_ZONE_NAME: "${{ secrets.MASK_CF_ZONE_NAME }}"
           MASK_ORACLE_DOMAIN: "${{ secrets.MASK_ORACLE_DOMAIN }}"
@@ -50,9 +50,8 @@ jobs:
           echo ""
           curl --silent -X POST \
             $MSG_API \
-            -F token=$MSG_TOKEN \
-            -F host=arm2 \
-            -F "message=机器ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
+            -F chat_id=$MSG_CHAT_ID \
+            -F "text=[ARM2]ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
       - name: RetryJob
         if: ${{ failure() }}
         env:
