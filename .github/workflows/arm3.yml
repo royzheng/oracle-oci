@@ -47,7 +47,10 @@ jobs:
                -H "$CF_AUTH" \
                -H "Content-Type: application/json" \
                --data "{\"type\":\"A\",\"name\":\"$CF_DOMAIN\",\"content\":\"$PUBLIC_IP\",\"ttl\":60,\"priority\":10,\"proxied\":false}"
-          curl -g "$MSG_API?chat_id=$MSG_CHAT_ID&text=🐢[ARM3]ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]"
+          curl \
+            --data-urlencode "chat_id=$MSG_CHAT_ID" \
+            --data-urlencode "text=🐢[ARM3]ip由$PREV_PUBLIC_IP变更为$PUBLIC_IP[$MESSAGE]" \
+            "$MSG_API"
       - name: RetryJob
         if: ${{ failure() }}
         env:
